@@ -1,0 +1,1739 @@
+﻿<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Suivi Depenses</title>
+    <style>
+      :root {
+        --bg: #f5f4ef;
+        --card: #ffffff;
+        --text: #1f1f1f;
+        --muted: #666666;
+        --accent: #0f766e;
+        --accent-2: #115e59;
+        --line: #e8e5dc;
+        --danger: #b91c1c;
+        --radius: 16px;
+        --shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+        --font: "Avenir Next", "Segoe UI", sans-serif;
+      }
+
+      * {
+        box-sizing: border-box;
+        -webkit-tap-highlight-color: transparent;
+      }
+
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        height: 100%;
+        font-family: var(--font);
+        color: var(--text);
+        background:
+          radial-gradient(circle at 15% -10%, #d7efe7 0%, transparent 40%),
+          radial-gradient(circle at 85% 110%, #f0e3cc 0%, transparent 45%),
+          var(--bg);
+      }
+
+      body {
+        max-width: 640px;
+        margin: 0 auto;
+        min-height: 100dvh;
+      }
+
+      .app {
+        min-height: 100dvh;
+        display: flex;
+        flex-direction: column;
+        padding: 14px 14px 20px;
+      }
+
+      .screen {
+        display: none;
+        flex: 1;
+      }
+
+      .screen.active {
+        display: flex;
+        flex-direction: column;
+        animation: fadeIn 220ms ease;
+      }
+
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+          transform: translateY(4px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      .topbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        margin-bottom: 14px;
+        min-height: 42px;
+      }
+
+      .icon-btn {
+        border: 1px solid var(--line);
+        background: rgba(255, 255, 255, 0.9);
+        border-radius: 12px;
+        min-width: 42px;
+        height: 42px;
+        font-size: 20px;
+        cursor: pointer;
+        display: grid;
+        place-items: center;
+        box-shadow: 0 3px 10px rgba(0, 0, 0, 0.05);
+      }
+
+      .title {
+        font-size: 16px;
+        font-weight: 600;
+        color: var(--muted);
+        margin: 0;
+        flex: 1;
+        text-align: right;
+      }
+
+      .entry-wrap {
+        flex: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding-bottom: 36px;
+      }
+
+      .today-summary {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        padding: 10px 12px;
+        margin-bottom: 12px;
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        background: rgba(255, 255, 255, 0.88);
+      }
+
+      .today-label {
+        margin: 0;
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+      }
+
+      .today-amount {
+        margin: 0;
+        text-align: right;
+        font-size: 14px;
+        font-weight: 700;
+      }
+
+      .budget-card {
+        padding: 14px;
+        margin-bottom: 12px;
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        background: rgba(255, 255, 255, 0.92);
+      }
+
+      .budget-head,
+      .budget-values {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+      }
+
+      .budget-title { margin: 0; font-size: 14px; font-weight: 800; }
+      .budget-edit { border: 0; background: transparent; color: var(--accent-2); font-weight: 700; cursor: pointer; }
+      .budget-track { height: 12px; margin: 11px 0 7px; overflow: hidden; border-radius: 999px; background: #e8e5dc; }
+      .budget-fill { width: 0; height: 100%; border-radius: inherit; background: var(--accent); transition: width 300ms ease, background 300ms ease; }
+      .budget-fill.warning { background: #d97706; }
+      .budget-fill.exceeded { background: var(--danger); }
+      .budget-values { font-size: 12px; color: var(--muted); }
+
+      .entry-card {
+        width: 100%;
+        max-width: 440px;
+        background: var(--card);
+        border: 1px solid var(--line);
+        border-radius: 22px;
+        padding: 20px;
+        box-shadow: var(--shadow);
+      }
+
+      .currency-switch {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+        margin-bottom: 14px;
+        background: #f7f7f7;
+        padding: 6px;
+        border-radius: 12px;
+        border: 1px solid var(--line);
+      }
+
+      .currency-btn {
+        height: 38px;
+        border: none;
+        border-radius: 10px;
+        font-size: 15px;
+        font-weight: 600;
+        color: var(--muted);
+        background: transparent;
+        cursor: pointer;
+      }
+
+      .currency-btn.active {
+        background: #fff;
+        color: var(--text);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+      }
+
+      .amount-row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        padding: 10px 12px;
+        margin-bottom: 8px;
+      }
+
+      .amount-row input {
+        flex: 1;
+        border: none;
+        outline: none;
+        font-size: 30px;
+        font-weight: 700;
+        width: 100%;
+        min-width: 0;
+        color: var(--text);
+        background: transparent;
+      }
+
+      .amount-row input[readonly] {
+        caret-color: transparent;
+        cursor: default;
+      }
+
+      .amount-unit {
+        font-size: 16px;
+        font-weight: 700;
+        color: var(--muted);
+      }
+
+      .conversion {
+        font-size: 13px;
+        color: var(--muted);
+        min-height: 19px;
+        margin-bottom: 14px;
+      }
+
+      .categories {
+        display: grid;
+        grid-template-columns: repeat(5, 1fr);
+        gap: 10px;
+        margin-bottom: 14px;
+      }
+
+      .cat-btn {
+        height: 52px;
+        border-radius: 14px;
+        border: 1px solid var(--line);
+        background: #fff;
+        font-size: 24px;
+        cursor: pointer;
+        display: grid;
+        place-items: center;
+      }
+
+      .cat-btn.selected {
+        border-color: var(--accent);
+        box-shadow: 0 0 0 2px rgba(15, 118, 110, 0.2) inset;
+        background: #edfaf8;
+      }
+
+      .cat-add-btn {
+        font-size: 26px;
+        font-weight: 700;
+        color: var(--accent-2);
+        background: #f5fffc;
+      }
+
+      .keypad {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 10px;
+        margin-bottom: 14px;
+      }
+
+      .keypad-btn {
+        height: 56px;
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        background: #fff;
+        font-size: 24px;
+        font-weight: 700;
+        color: var(--text);
+        cursor: pointer;
+      }
+
+      .keypad-btn.action {
+        font-size: 18px;
+        font-weight: 800;
+        color: var(--accent-2);
+      }
+
+      .keypad-btn.wide {
+        grid-column: span 3;
+        height: 48px;
+      }
+
+      .confirm-btn {
+        width: 100%;
+        height: 48px;
+        border: none;
+        border-radius: 12px;
+        font-size: 16px;
+        font-weight: 700;
+        color: #fff;
+        background: linear-gradient(
+          135deg,
+          var(--accent) 0%,
+          var(--accent-2) 100%
+        );
+        cursor: pointer;
+      }
+
+      .confirm-btn:disabled {
+        opacity: 0.45;
+        cursor: not-allowed;
+      }
+
+      .toast {
+        margin-top: 10px;
+        text-align: center;
+        font-size: 13px;
+        color: var(--accent-2);
+        min-height: 18px;
+      }
+
+      .list-wrap {
+        background: var(--card);
+        border: 1px solid var(--line);
+        border-radius: 18px;
+        box-shadow: var(--shadow);
+        overflow: auto;
+        flex: 1;
+        padding: 10px 0;
+      }
+
+      .list-summary {
+        margin-bottom: 10px;
+      }
+
+      .summary-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 8px;
+      }
+
+      .summary-card {
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        background: rgba(255, 255, 255, 0.92);
+        padding: 9px 8px;
+        text-align: left;
+        cursor: pointer;
+      }
+
+      .summary-card.active {
+        border-color: var(--accent);
+        box-shadow: 0 0 0 2px rgba(15, 118, 110, 0.16) inset;
+        background: #edfaf8;
+      }
+
+      .summary-label {
+        margin: 0 0 4px;
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
+        color: var(--muted);
+        font-weight: 700;
+      }
+
+      .summary-eur {
+        margin: 0;
+        font-size: 13px;
+        font-weight: 800;
+      }
+
+      .summary-krw {
+        margin: 2px 0 0;
+        font-size: 11px;
+        color: var(--muted);
+        font-weight: 600;
+      }
+
+      .day-group {
+        padding: 10px 14px 12px;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .day-group:last-child {
+        border-bottom: none;
+      }
+
+      .day-head {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        gap: 8px;
+        margin-bottom: 8px;
+      }
+
+      .day-date {
+        font-size: 16px;
+        font-weight: 700;
+        margin: 0;
+      }
+
+      .day-sum {
+        font-size: 12px;
+        color: var(--muted);
+        text-align: right;
+      }
+
+      .expense-item {
+        list-style: none;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        padding: 8px 0;
+        border-top: 1px dashed #eee;
+        font-size: 15px;
+      }
+
+      .expense-item:first-of-type {
+        border-top: none;
+      }
+
+      .expense-item.pressable {
+        touch-action: manipulation;
+      }
+
+      .expense-left {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        min-width: 0;
+        overflow: hidden;
+        white-space: nowrap;
+        text-overflow: ellipsis;
+      }
+
+      .expense-right {
+        font-weight: 700;
+        white-space: nowrap;
+      }
+
+      .empty {
+        padding: 20px;
+        text-align: center;
+        color: var(--muted);
+        font-size: 14px;
+      }
+
+      .danger-btn {
+        margin: 12px auto 0;
+        display: block;
+        background: transparent;
+        border: 1px solid #f5c2c2;
+        color: var(--danger);
+        border-radius: 10px;
+        padding: 7px 10px;
+        font-size: 12px;
+        cursor: pointer;
+      }
+
+      .sheet-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.34);
+        display: none;
+        align-items: flex-end;
+        justify-content: center;
+        padding: 10px;
+        z-index: 30;
+      }
+
+      .sheet-overlay.open {
+        display: flex;
+      }
+
+      .sheet {
+        width: 100%;
+        max-width: 640px;
+        border-radius: 16px 16px 8px 8px;
+        background: #fff;
+        border: 1px solid var(--line);
+        box-shadow: var(--shadow);
+        padding: 12px;
+      }
+
+      .sheet-title {
+        margin: 0 0 4px;
+        font-size: 16px;
+        font-weight: 700;
+      }
+
+      .sheet-sub {
+        margin: 0 0 10px;
+        font-size: 13px;
+        color: var(--muted);
+      }
+
+      .sheet-actions {
+        display: grid;
+        gap: 8px;
+      }
+
+      .sheet-btn {
+        height: 44px;
+        border-radius: 10px;
+        border: 1px solid var(--line);
+        background: #fff;
+        font-weight: 700;
+        font-size: 14px;
+        cursor: pointer;
+      }
+
+      .sheet-btn.delete {
+        color: var(--danger);
+        border-color: #f5c2c2;
+      }
+
+      .sheet-input {
+        width: 100%;
+        height: 42px;
+        border-radius: 10px;
+        border: 1px solid var(--line);
+        padding: 0 10px;
+        font-size: 14px;
+        outline: none;
+        margin-bottom: 10px;
+      }
+
+      .icon-picker {
+        display: grid;
+        grid-template-columns: repeat(6, minmax(0, 1fr));
+        gap: 8px;
+        margin-bottom: 10px;
+      }
+
+      .icon-option {
+        height: 42px;
+        border-radius: 10px;
+        border: 1px solid var(--line);
+        background: #fff;
+        font-size: 22px;
+        cursor: pointer;
+      }
+
+      .icon-option.selected {
+        border-color: var(--accent);
+        box-shadow: 0 0 0 2px rgba(15, 118, 110, 0.16) inset;
+        background: #edfaf8;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="app">
+      <section id="entryScreen" class="screen active" aria-label="Ecran saisie">
+        <div class="topbar">
+          <button
+            id="goList"
+            class="icon-btn"
+            type="button"
+            aria-label="Voir les depenses"
+          >
+            ☰
+          </button>
+          <p class="title">Saisie rapide</p>
+        </div>
+
+        <div class="today-summary" aria-live="polite">
+          <p class="today-label">Aujourd'hui</p>
+          <p id="todayAmount" class="today-amount">0,00 € | 0 ₫</p>
+        </div>
+
+        <div class="budget-card" aria-live="polite">
+          <div class="budget-head">
+            <p class="budget-title">Budget initial</p>
+            <button id="budgetEditBtn" class="budget-edit" type="button">Définir</button>
+          </div>
+          <div class="budget-track" role="progressbar" aria-label="Budget utilisé" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+            <div id="budgetFill" class="budget-fill"></div>
+          </div>
+          <div class="budget-values">
+            <span id="budgetSpent">0,00 € dépensé</span>
+            <span id="budgetRemaining">Budget non défini</span>
+          </div>
+        </div>
+
+        <div class="entry-wrap">
+          <div class="entry-card">
+            <div
+              class="currency-switch"
+              role="tablist"
+              aria-label="Choix devise"
+            >
+              <button
+                class="currency-btn active"
+                data-currency="EUR"
+                type="button"
+              >
+                € EUR
+              </button>
+              <button class="currency-btn" data-currency="VND" type="button">
+                ₫ VND
+              </button>
+            </div>
+
+            <div class="amount-row">
+              <input
+                id="amountInput"
+                type="text"
+                inputmode="none"
+                readonly
+                placeholder="0"
+                aria-label="Montant"
+              />
+              <span id="amountUnit" class="amount-unit">EUR</span>
+            </div>
+
+            <div id="conversionLine" class="conversion"></div>
+
+            <div id="keypad" class="keypad" aria-label="Pave numerique">
+              <button class="keypad-btn" type="button" data-key="1">1</button>
+              <button class="keypad-btn" type="button" data-key="2">2</button>
+              <button class="keypad-btn" type="button" data-key="3">3</button>
+              <button class="keypad-btn" type="button" data-key="4">4</button>
+              <button class="keypad-btn" type="button" data-key="5">5</button>
+              <button class="keypad-btn" type="button" data-key="6">6</button>
+              <button class="keypad-btn" type="button" data-key="7">7</button>
+              <button class="keypad-btn" type="button" data-key="8">8</button>
+              <button class="keypad-btn" type="button" data-key="9">9</button>
+              <button class="keypad-btn" type="button" data-key=".">.</button>
+              <button class="keypad-btn" type="button" data-key="0">0</button>
+              <button
+                class="keypad-btn action"
+                type="button"
+                data-key="backspace"
+                aria-label="Supprimer un chiffre"
+              >
+                ⌫
+              </button>
+              <button
+                class="keypad-btn action wide"
+                type="button"
+                data-key="clear"
+                aria-label="Effacer tout"
+              >
+                C
+              </button>
+            </div>
+
+            <div
+              id="categoryGrid"
+              class="categories"
+              aria-label="Categories"
+            ></div>
+
+            <button id="confirmBtn" class="confirm-btn" type="button">
+              OK
+            </button>
+            <div id="toast" class="toast" aria-live="polite"></div>
+          </div>
+        </div>
+      </section>
+
+      <section id="listScreen" class="screen" aria-label="Ecran liste depenses">
+        <div class="topbar">
+          <button
+            id="goEntry"
+            class="icon-btn"
+            type="button"
+            aria-label="Retour saisie"
+          >
+            ←
+          </button>
+          <p class="title">Depenses</p>
+        </div>
+
+        <div class="list-summary" aria-label="Synthese periodes">
+          <div class="summary-grid">
+            <button class="summary-card" type="button" data-filter="7d">
+              <p class="summary-label">7 jours</p>
+              <p id="sum7dEur" class="summary-eur">0,00 €</p>
+              <p id="sum7dKrw" class="summary-krw">0 ₫</p>
+            </button>
+            <button class="summary-card" type="button" data-filter="month">
+              <p class="summary-label">Mois</p>
+              <p id="sumMonthEur" class="summary-eur">0,00 €</p>
+              <p id="sumMonthKrw" class="summary-krw">0 ₫</p>
+            </button>
+            <button class="summary-card" type="button" data-filter="year">
+              <p class="summary-label">Annee</p>
+              <p id="sumYearEur" class="summary-eur">0,00 €</p>
+              <p id="sumYearKrw" class="summary-krw">0 ₫</p>
+            </button>
+          </div>
+        </div>
+
+        <div id="listWrap" class="list-wrap"></div>
+        <button id="clearAllBtn" class="danger-btn" type="button">
+          Effacer toutes les depenses
+        </button>
+      </section>
+    </div>
+
+    <div id="expenseSheetOverlay" class="sheet-overlay" aria-hidden="true">
+      <div
+        class="sheet"
+        role="dialog"
+        aria-modal="true"
+        aria-label="Actions depense"
+      >
+        <p class="sheet-title">Action rapide</p>
+        <p id="sheetSub" class="sheet-sub"></p>
+        <div class="sheet-actions">
+          <button id="sheetEditBtn" class="sheet-btn" type="button">
+            Corriger le montant
+          </button>
+          <button id="sheetDateBtn" class="sheet-btn" type="button">
+            Modifier la date
+          </button>
+          <button id="sheetDeleteBtn" class="sheet-btn delete" type="button">
+            Supprimer
+          </button>
+          <button id="sheetCancelBtn" class="sheet-btn" type="button">
+            Annuler
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div id="customCategoryOverlay" class="sheet-overlay" aria-hidden="true">
+      <div
+        class="sheet"
+        role="dialog"
+        aria-modal="true"
+        aria-label="Creer categorie"
+      >
+        <p class="sheet-title">Nouvelle categorie</p>
+        <p class="sheet-sub">Choisissez une icone et un libelle.</p>
+        <div
+          id="customIconGrid"
+          class="icon-picker"
+          aria-label="Choix icone"
+        ></div>
+        <input
+          id="customLabelInput"
+          class="sheet-input"
+          type="text"
+          maxlength="20"
+          placeholder="Ex: Vetements"
+        />
+        <div class="sheet-actions">
+          <button id="customSaveBtn" class="sheet-btn" type="button">
+            Ajouter
+          </button>
+          <button id="customCancelBtn" class="sheet-btn" type="button">
+            Annuler
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      (function () {
+        const VND_PER_EUR = 30080;
+        const STORAGE_KEY = "quick_expenses_v1";
+        const CATEGORY_STORAGE_KEY = "quick_expense_categories_v1";
+        const BUDGET_STORAGE_KEY = "quick_expense_budget_v1";
+        const LONG_PRESS_MS = 430;
+        const CATEGORY_ICON_CHOICES = [
+          "🍽️",
+          "🎭",
+          "🏨",
+          "🛒",
+          "🚆",
+          "👕",
+          "🩺",
+          "🏛️",
+          "✈️",
+          "☕",
+          "🎟️",
+          "🏖️",
+          "🏋️",
+          "🎁",
+          "📱",
+          "💊",
+          "🚕",
+          "🚇",
+        ];
+        const DEFAULT_CATEGORIES = [
+          { id: "restaurant", label: "Restaurant", icon: "🍽️" },
+          { id: "loisir", label: "Loisir", icon: "🎭" },
+          { id: "hotel", label: "Hotel", icon: "🏨" },
+          { id: "courses", label: "Courses", icon: "🛒" },
+          { id: "transport", label: "Transport", icon: "🚆" },
+        ];
+
+        const state = {
+          currentCurrency: "EUR",
+          categories: loadCategories(),
+          selectedCategory: "restaurant",
+          activeListFilter: "all",
+          expenses: loadExpenses(),
+          budgetEUR: loadBudget(),
+        };
+
+        const entryScreen = document.getElementById("entryScreen");
+        const listScreen = document.getElementById("listScreen");
+        const amountInput = document.getElementById("amountInput");
+        const amountUnit = document.getElementById("amountUnit");
+        const conversionLine = document.getElementById("conversionLine");
+        const confirmBtn = document.getElementById("confirmBtn");
+        const toast = document.getElementById("toast");
+        const categoryGrid = document.getElementById("categoryGrid");
+        const todayAmount = document.getElementById("todayAmount");
+        const budgetEditBtn = document.getElementById("budgetEditBtn");
+        const budgetFill = document.getElementById("budgetFill");
+        const budgetSpent = document.getElementById("budgetSpent");
+        const budgetRemaining = document.getElementById("budgetRemaining");
+        const listWrap = document.getElementById("listWrap");
+        const keypad = document.getElementById("keypad");
+        const expenseSheetOverlay = document.getElementById(
+          "expenseSheetOverlay",
+        );
+        const customCategoryOverlay = document.getElementById(
+          "customCategoryOverlay",
+        );
+        const sheetSub = document.getElementById("sheetSub");
+        const sheetEditBtn = document.getElementById("sheetEditBtn");
+        const sheetDateBtn = document.getElementById("sheetDateBtn");
+        const sheetDeleteBtn = document.getElementById("sheetDeleteBtn");
+        const sheetCancelBtn = document.getElementById("sheetCancelBtn");
+        const customIconGrid = document.getElementById("customIconGrid");
+        const customLabelInput = document.getElementById("customLabelInput");
+        const customSaveBtn = document.getElementById("customSaveBtn");
+        const customCancelBtn = document.getElementById("customCancelBtn");
+        const summaryCards = Array.from(
+          document.querySelectorAll(".summary-card"),
+        );
+        const sum7dEur = document.getElementById("sum7dEur");
+        const sum7dKrw = document.getElementById("sum7dKrw");
+        const sumMonthEur = document.getElementById("sumMonthEur");
+        const sumMonthKrw = document.getElementById("sumMonthKrw");
+        const sumYearEur = document.getElementById("sumYearEur");
+        const sumYearKrw = document.getElementById("sumYearKrw");
+
+        const goListBtn = document.getElementById("goList");
+        const goEntryBtn = document.getElementById("goEntry");
+        const clearAllBtn = document.getElementById("clearAllBtn");
+        const currencyBtns = Array.from(
+          document.querySelectorAll(".currency-btn"),
+        );
+        let amountBuffer = "";
+        let activeExpenseId = null;
+        let longPressTimer = null;
+        let pressStartX = 0;
+        let pressStartY = 0;
+        let pressMoved = false;
+        let selectedCustomIcon = CATEGORY_ICON_CHOICES[0];
+
+        if (!findCategoryById(state.selectedCategory)) {
+          state.selectedCategory = state.categories.length
+            ? state.categories[0].id
+            : "restaurant";
+        }
+        renderCategoryButtons();
+        renderIconChoices();
+        renderBudget();
+
+        budgetEditBtn.addEventListener("click", function () {
+          const current = state.budgetEUR > 0 ? String(state.budgetEUR).replace(".", ",") : "";
+          const input = window.prompt("Budget initial en euros", current);
+          if (input === null) return;
+          const value = parseFloat(input.trim().replace(",", "."));
+          if (!Number.isFinite(value) || value <= 0) {
+            showToast("Budget invalide");
+            return;
+          }
+          state.budgetEUR = round2(value);
+          localStorage.setItem(BUDGET_STORAGE_KEY, String(state.budgetEUR));
+          renderBudget();
+          showToast("Budget enregistré");
+        });
+
+        goListBtn.addEventListener("click", function () {
+          showScreen("list");
+          renderList();
+        });
+
+        goEntryBtn.addEventListener("click", function () {
+          showScreen("entry");
+        });
+
+        currencyBtns.forEach(function (btn) {
+          btn.addEventListener("click", function () {
+            state.currentCurrency = btn.dataset.currency;
+            currencyBtns.forEach(function (b) {
+              b.classList.toggle("active", b === btn);
+            });
+            amountUnit.textContent = state.currentCurrency;
+            updateConversionHint();
+          });
+        });
+
+        categoryGrid.addEventListener("click", function (event) {
+          const btn = event.target.closest(".cat-btn");
+          if (!btn) {
+            return;
+          }
+          if (btn.dataset.action === "add-category") {
+            openCustomCategorySheet();
+            return;
+          }
+          if (!btn.dataset.category) {
+            return;
+          }
+          state.selectedCategory = btn.dataset.category;
+          renderCategoryButtons();
+        });
+
+        summaryCards.forEach(function (card) {
+          card.addEventListener("click", function () {
+            const targetFilter = card.dataset.filter;
+            state.activeListFilter =
+              state.activeListFilter === targetFilter ? "all" : targetFilter;
+            renderList();
+          });
+        });
+
+        keypad.addEventListener("click", function (event) {
+          const btn = event.target.closest(".keypad-btn");
+          if (!btn) {
+            return;
+          }
+          onKeypadPress(btn.dataset.key);
+        });
+
+        confirmBtn.addEventListener("click", function () {
+          const raw = parseAmountBuffer();
+          if (!Number.isFinite(raw) || raw <= 0) {
+            showToast("Entrez un montant valide");
+            return;
+          }
+
+          const eur = state.currentCurrency === "EUR" ? raw : raw / VND_PER_EUR;
+          const vnd = state.currentCurrency === "VND" ? raw : raw * VND_PER_EUR;
+
+          const expense = {
+            id: crypto.randomUUID
+              ? crypto.randomUUID()
+              : String(Date.now()) + Math.random().toString(16).slice(2),
+            timestamp: new Date().toISOString(),
+            category: state.selectedCategory,
+            icon: getCategoryIcon(state.selectedCategory, "🍽️"),
+            amountEUR: round2(eur),
+            amountVND: Math.round(vnd),
+          };
+
+          state.expenses.push(expense);
+          saveExpenses();
+          renderTodayTotal();
+          renderBudget();
+
+          clearAmount();
+          updateConversionHint();
+          updateConfirmState();
+          showToast("Depense enregistree");
+        });
+
+        clearAllBtn.addEventListener("click", function () {
+          const ok = window.confirm("Effacer toutes les depenses ?");
+          if (!ok) {
+            return;
+          }
+          state.expenses = [];
+          saveExpenses();
+          renderTodayTotal();
+          renderBudget();
+          renderList();
+        });
+
+        listWrap.addEventListener("pointerdown", function (event) {
+          const item = event.target.closest(".expense-item");
+          if (!item || !item.dataset.expenseId) {
+            return;
+          }
+
+          clearLongPressTimer();
+          pressMoved = false;
+          pressStartX = event.clientX;
+          pressStartY = event.clientY;
+
+          longPressTimer = window.setTimeout(function () {
+            openExpenseSheet(item.dataset.expenseId);
+          }, LONG_PRESS_MS);
+        });
+
+        listWrap.addEventListener("pointermove", function (event) {
+          if (!longPressTimer) {
+            return;
+          }
+          const dx = Math.abs(event.clientX - pressStartX);
+          const dy = Math.abs(event.clientY - pressStartY);
+          if (dx > 10 || dy > 10) {
+            pressMoved = true;
+            clearLongPressTimer();
+          }
+        });
+
+        listWrap.addEventListener("pointerup", clearLongPressTimer);
+        listWrap.addEventListener("pointercancel", clearLongPressTimer);
+        listWrap.addEventListener("pointerleave", clearLongPressTimer);
+
+        expenseSheetOverlay.addEventListener("click", function (event) {
+          if (event.target === expenseSheetOverlay) {
+            closeExpenseSheet();
+          }
+        });
+
+        customCategoryOverlay.addEventListener("click", function (event) {
+          if (event.target === customCategoryOverlay) {
+            closeCustomCategorySheet();
+          }
+        });
+
+        sheetCancelBtn.addEventListener("click", closeExpenseSheet);
+        customCancelBtn.addEventListener("click", closeCustomCategorySheet);
+
+        customIconGrid.addEventListener("click", function (event) {
+          const btn = event.target.closest(".icon-option");
+          if (!btn) {
+            return;
+          }
+          selectedCustomIcon = btn.dataset.icon;
+          renderIconChoices();
+        });
+
+        customSaveBtn.addEventListener("click", function () {
+          const label = customLabelInput.value.trim();
+          if (!label) {
+            showToast("Ajoutez un libelle");
+            return;
+          }
+          const alreadyExists = state.categories.some(function (cat) {
+            return cat.label.toLowerCase() === label.toLowerCase();
+          });
+          if (alreadyExists) {
+            showToast("Categorie deja existante");
+            return;
+          }
+          const id = createCategoryId(label);
+          state.categories.push({
+            id: id,
+            label: label,
+            icon: selectedCustomIcon,
+          });
+          saveCategories();
+          state.selectedCategory = id;
+          renderCategoryButtons();
+          closeCustomCategorySheet();
+          showToast("Categorie ajoutee");
+        });
+
+        sheetEditBtn.addEventListener("click", function () {
+          if (!activeExpenseId) {
+            return;
+          }
+          const expense = state.expenses.find(function (item) {
+            return item.id === activeExpenseId;
+          });
+          if (!expense) {
+            closeExpenseSheet();
+            return;
+          }
+
+          const input = window.prompt(
+            "Nouveau montant en EUR",
+            String(expense.amountEUR).replace(".", ","),
+          );
+          if (input === null) {
+            return;
+          }
+
+          const normalized = input.trim().replace(",", ".");
+          const eur = parseFloat(normalized);
+          if (!Number.isFinite(eur) || eur <= 0) {
+            showToast("Montant invalide");
+            return;
+          }
+
+          expense.amountEUR = round2(eur);
+          expense.amountVND = Math.round(expense.amountEUR * VND_PER_EUR);
+          saveExpenses();
+          renderTodayTotal();
+          renderBudget();
+          renderList();
+          closeExpenseSheet();
+          showToast("Depense corrigee");
+        });
+
+        sheetDateBtn.addEventListener("click", function () {
+          if (!activeExpenseId) {
+            return;
+          }
+          const expense = state.expenses.find(function (item) {
+            return item.id === activeExpenseId;
+          });
+          if (!expense) {
+            closeExpenseSheet();
+            return;
+          }
+
+          const currentDate = localDateKey(new Date(expense.timestamp));
+          const currentDateFR = formatDateFR(currentDate);
+          const input = window.prompt(
+            "Nouvelle date (JJ/MM/AAAA ou AAAA-MM-JJ)",
+            currentDateFR,
+          );
+          if (input === null) {
+            return;
+          }
+
+          const parsed = parseDateInput(input);
+          if (!parsed) {
+            showToast("Date invalide");
+            return;
+          }
+
+          const original = new Date(expense.timestamp);
+          original.setFullYear(parsed.year, parsed.month - 1, parsed.day);
+          expense.timestamp = original.toISOString();
+          saveExpenses();
+          renderTodayTotal();
+          renderBudget();
+          renderList();
+          closeExpenseSheet();
+          showToast("Date modifiee");
+        });
+
+        sheetDeleteBtn.addEventListener("click", function () {
+          if (!activeExpenseId) {
+            return;
+          }
+          const ok = window.confirm("Supprimer cette depense ?");
+          if (!ok) {
+            return;
+          }
+          state.expenses = state.expenses.filter(function (item) {
+            return item.id !== activeExpenseId;
+          });
+          saveExpenses();
+          renderTodayTotal();
+          renderList();
+          closeExpenseSheet();
+          showToast("Depense supprimee");
+        });
+
+        function onKeypadPress(key) {
+          if (key === "clear") {
+            clearAmount();
+            updateConversionHint();
+            updateConfirmState();
+            return;
+          }
+
+          if (key === "backspace") {
+            amountBuffer = amountBuffer.slice(0, -1);
+            syncAmountInput();
+            updateConversionHint();
+            updateConfirmState();
+            return;
+          }
+
+          if (key === ".") {
+            if (amountBuffer.includes(".")) {
+              return;
+            }
+            amountBuffer = amountBuffer ? amountBuffer + "." : "0.";
+            syncAmountInput();
+            updateConversionHint();
+            updateConfirmState();
+            return;
+          }
+
+          if (!/^[0-9]$/.test(key)) {
+            return;
+          }
+
+          amountBuffer = amountBuffer === "0" ? key : amountBuffer + key;
+          syncAmountInput();
+          updateConversionHint();
+          updateConfirmState();
+        }
+
+        function clearAmount() {
+          amountBuffer = "";
+          syncAmountInput();
+        }
+
+        function syncAmountInput() {
+          amountInput.value = amountBuffer;
+        }
+
+        function parseAmountBuffer() {
+          if (!amountBuffer) {
+            return NaN;
+          }
+          return parseFloat(amountBuffer);
+        }
+
+        function updateConfirmState() {
+          const raw = parseAmountBuffer();
+          confirmBtn.disabled = !(Number.isFinite(raw) && raw > 0);
+        }
+
+        function showScreen(name) {
+          entryScreen.classList.toggle("active", name === "entry");
+          listScreen.classList.toggle("active", name === "list");
+          closeExpenseSheet();
+          closeCustomCategorySheet();
+          if (name === "entry") {
+            renderTodayTotal();
+          }
+        }
+
+        function updateConversionHint() {
+          const raw = parseAmountBuffer();
+          if (!Number.isFinite(raw) || raw <= 0) {
+            conversionLine.textContent = "";
+            return;
+          }
+
+          if (state.currentCurrency === "EUR") {
+            const vnd = Math.round(raw * VND_PER_EUR);
+            conversionLine.textContent = "≈ " + formatVND(vnd) + " VND";
+          } else {
+            const eur = raw / VND_PER_EUR;
+            conversionLine.textContent = "≈ " + formatEUR(eur) + " EUR";
+          }
+        }
+
+        function renderList() {
+          renderListSummary();
+
+          const expensesToShow = applyListFilter(
+            state.expenses,
+            state.activeListFilter,
+          );
+          if (!expensesToShow.length) {
+            if (!state.expenses.length) {
+              listWrap.innerHTML =
+                '<div class="empty">Aucune depense enregistree.</div>';
+            } else {
+              listWrap.innerHTML =
+                '<div class="empty">Aucune depense pour ce filtre.</div>';
+            }
+            return;
+          }
+
+          const groups = groupByDay(expensesToShow);
+          const dayKeys = Object.keys(groups).sort(function (a, b) {
+            return b.localeCompare(a);
+          });
+
+          listWrap.innerHTML = dayKeys
+            .map(function (day) {
+              const entries = groups[day].sort(function (a, b) {
+                return b.timestamp.localeCompare(a.timestamp);
+              });
+
+              const totalEUR = entries.reduce(function (acc, item) {
+                return acc + item.amountEUR;
+              }, 0);
+              const totalVND = entries.reduce(function (acc, item) {
+                return acc + item.amountVND;
+              }, 0);
+
+              const itemsHtml = entries
+                .map(function (item) {
+                  const label = getCategoryLabel(item.category);
+                  return (
+                    '<li class="expense-item pressable" data-expense-id="' +
+                    escapeHtml(item.id) +
+                    '">' +
+                    '<div class="expense-left"><span>' +
+                    escapeHtml(
+                      item.icon || getCategoryIcon(item.category, "•"),
+                    ) +
+                    "</span><span>" +
+                    escapeHtml(label) +
+                    "</span></div>" +
+                    '<span class="expense-right">' +
+                    formatEUR(item.amountEUR) +
+                    "</span>" +
+                    "</li>"
+                  );
+                })
+                .join("");
+
+              return (
+                '<div class="day-group">' +
+                '<div class="day-head">' +
+                '<p class="day-date">' +
+                formatDateFR(day) +
+                "</p>" +
+                '<div class="day-sum">' +
+                formatEUR(totalEUR) +
+                " | " +
+                formatVND(totalVND) +
+                " VND</div>" +
+                "</div>" +
+                '<ul style="margin:0;padding:0;">' +
+                itemsHtml +
+                "</ul>" +
+                "</div>"
+              );
+            })
+            .join("");
+        }
+
+        function groupByDay(expenses) {
+          return expenses.reduce(function (acc, item) {
+            const key = localDateKey(new Date(item.timestamp));
+            if (!acc[key]) {
+              acc[key] = [];
+            }
+            acc[key].push(item);
+            return acc;
+          }, {});
+        }
+
+        function renderListSummary() {
+          const sevenDays = applyListFilter(state.expenses, "7d");
+          const month = applyListFilter(state.expenses, "month");
+          const year = applyListFilter(state.expenses, "year");
+
+          updateSummarySlot(sum7dEur, sum7dKrw, computeTotals(sevenDays));
+          updateSummarySlot(sumMonthEur, sumMonthKrw, computeTotals(month));
+          updateSummarySlot(sumYearEur, sumYearKrw, computeTotals(year));
+
+          summaryCards.forEach(function (card) {
+            const filter = card.dataset.filter;
+            card.classList.toggle("active", state.activeListFilter === filter);
+          });
+        }
+
+        function updateSummarySlot(eurNode, krwNode, totals) {
+          eurNode.textContent = formatEUR(totals.eur);
+          krwNode.textContent = formatVND(totals.vnd) + " VND";
+        }
+
+        function computeTotals(expenses) {
+          return expenses.reduce(
+            function (acc, item) {
+              acc.eur += item.amountEUR;
+              acc.vnd += item.amountVND;
+              return acc;
+            },
+            { eur: 0, vnd: 0 },
+          );
+        }
+
+        function applyListFilter(expenses, filter) {
+          if (filter === "all") {
+            return expenses.slice();
+          }
+          const now = new Date();
+          const sevenDaysStart = startOfDay(addDays(now, -6));
+          return expenses.filter(function (item) {
+            const date = new Date(item.timestamp);
+            if (filter === "7d") {
+              return date >= sevenDaysStart;
+            }
+            if (filter === "month") {
+              return (
+                date.getFullYear() === now.getFullYear() &&
+                date.getMonth() === now.getMonth()
+              );
+            }
+            if (filter === "year") {
+              return date.getFullYear() === now.getFullYear();
+            }
+            return true;
+          });
+        }
+
+        function formatDateFR(isoDate) {
+          const parts = isoDate.split("-");
+          return parts[2] + "/" + parts[1] + "/" + parts[0];
+        }
+
+        function round2(value) {
+          return Math.round(value * 100) / 100;
+        }
+
+        function formatEUR(value) {
+          return new Intl.NumberFormat("fr-FR", {
+            style: "currency",
+            currency: "EUR",
+          }).format(value);
+        }
+
+        function formatVND(value) {
+          return new Intl.NumberFormat("vi-VN", {
+            maximumFractionDigits: 0,
+          }).format(value);
+        }
+
+        function showToast(message) {
+          toast.textContent = message;
+          window.clearTimeout(showToast._timer);
+          showToast._timer = window.setTimeout(function () {
+            toast.textContent = "";
+          }, 1600);
+        }
+
+        function escapeHtml(text) {
+          return String(text)
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/\"/g, "&quot;")
+            .replace(/'/g, "&#039;");
+        }
+
+        function loadExpenses() {
+          try {
+            const raw = localStorage.getItem(STORAGE_KEY);
+            if (!raw) {
+              return [];
+            }
+            const data = JSON.parse(raw);
+            if (!Array.isArray(data)) {
+              return [];
+            }
+            return data.filter(function (item) {
+              const valid = (
+                item &&
+                typeof item.timestamp === "string" &&
+                Number.isFinite(item.amountEUR)
+              );
+              if (valid) item.amountVND = Math.round(item.amountEUR * VND_PER_EUR);
+              return valid;
+            });
+          } catch (err) {
+            return [];
+          }
+        }
+
+        function saveExpenses() {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(state.expenses));
+        }
+
+        function loadCategories() {
+          try {
+            const raw = localStorage.getItem(CATEGORY_STORAGE_KEY);
+            const parsed = raw ? JSON.parse(raw) : [];
+            const cleaned = Array.isArray(parsed)
+              ? parsed.filter(isValidCategory)
+              : [];
+            const map = {};
+            cleaned.forEach(function (cat) {
+              map[cat.id] = cat;
+            });
+
+            const merged = DEFAULT_CATEGORIES.map(function (cat) {
+              const stored = map[cat.id];
+              if (stored) {
+                return {
+                  id: stored.id,
+                  label: stored.label,
+                  icon: stored.icon,
+                };
+              }
+              return { id: cat.id, label: cat.label, icon: cat.icon };
+            });
+
+            cleaned.forEach(function (cat) {
+              const exists = merged.some(function (base) {
+                return base.id === cat.id;
+              });
+              if (!exists) {
+                merged.push({ id: cat.id, label: cat.label, icon: cat.icon });
+              }
+            });
+            return merged;
+          } catch (err) {
+            return DEFAULT_CATEGORIES.map(function (cat) {
+              return { id: cat.id, label: cat.label, icon: cat.icon };
+            });
+          }
+        }
+
+        function saveCategories() {
+          localStorage.setItem(
+            CATEGORY_STORAGE_KEY,
+            JSON.stringify(state.categories),
+          );
+        }
+
+        function isValidCategory(item) {
+          return (
+            item &&
+            typeof item.id === "string" &&
+            typeof item.label === "string" &&
+            item.label.trim().length > 0 &&
+            typeof item.icon === "string" &&
+            item.icon.length > 0
+          );
+        }
+
+        function findCategoryById(categoryId) {
+          return state.categories.find(function (cat) {
+            return cat.id === categoryId;
+          });
+        }
+
+        function getCategoryLabel(categoryId) {
+          const cat = findCategoryById(categoryId);
+          return cat ? cat.label : "Depense";
+        }
+
+        function getCategoryIcon(categoryId, fallback) {
+          const cat = findCategoryById(categoryId);
+          return cat ? cat.icon : fallback;
+        }
+
+        function renderCategoryButtons() {
+          const buttons = state.categories.map(function (cat) {
+            const selectedClass =
+              cat.id === state.selectedCategory ? " selected" : "";
+            return (
+              '<button class="cat-btn' +
+              selectedClass +
+              '" data-category="' +
+              escapeHtml(cat.id) +
+              '" type="button" aria-label="' +
+              escapeHtml(cat.label) +
+              '">' +
+              escapeHtml(cat.icon) +
+              "</button>"
+            );
+          });
+          buttons.push(
+            '<button class="cat-btn cat-add-btn" data-action="add-category" type="button" aria-label="Ajouter categorie">+</button>',
+          );
+          categoryGrid.innerHTML = buttons.join("");
+        }
+
+        function renderIconChoices() {
+          customIconGrid.innerHTML = CATEGORY_ICON_CHOICES.map(function (icon) {
+            const selected = icon === selectedCustomIcon ? " selected" : "";
+            return (
+              '<button class="icon-option' +
+              selected +
+              '" type="button" data-icon="' +
+              escapeHtml(icon) +
+              '" aria-label="Icone ' +
+              escapeHtml(icon) +
+              '">' +
+              escapeHtml(icon) +
+              "</button>"
+            );
+          }).join("");
+        }
+
+        function openCustomCategorySheet() {
+          selectedCustomIcon = CATEGORY_ICON_CHOICES[0];
+          customLabelInput.value = "";
+          renderIconChoices();
+          customCategoryOverlay.classList.add("open");
+          customCategoryOverlay.setAttribute("aria-hidden", "false");
+          customLabelInput.focus();
+        }
+
+        function closeCustomCategorySheet() {
+          customCategoryOverlay.classList.remove("open");
+          customCategoryOverlay.setAttribute("aria-hidden", "true");
+        }
+
+        function createCategoryId(label) {
+          const slug =
+            label
+              .toLowerCase()
+              .replace(/[^a-z0-9]+/g, "-")
+              .replace(/^-+|-+$/g, "") || "cat";
+          return "custom-" + slug + "-" + Date.now();
+        }
+
+        function renderTodayTotal() {
+          const todayKey = localDateKey(new Date());
+          const todayExpenses = state.expenses.filter(function (item) {
+            return localDateKey(new Date(item.timestamp)) === todayKey;
+          });
+          const totalEUR = todayExpenses.reduce(function (acc, item) {
+            return acc + item.amountEUR;
+          }, 0);
+          const totalVND = todayExpenses.reduce(function (acc, item) {
+            return acc + item.amountVND;
+          }, 0);
+          todayAmount.textContent =
+            formatEUR(totalEUR) + " | " + formatVND(totalVND) + " VND";
+        }
+
+        function loadBudget() {
+          const value = parseFloat(localStorage.getItem(BUDGET_STORAGE_KEY));
+          return Number.isFinite(value) && value > 0 ? value : 0;
+        }
+
+        function renderBudget() {
+          const spent = state.expenses.reduce(function (total, item) {
+            return total + item.amountEUR;
+          }, 0);
+          budgetSpent.textContent = formatEUR(spent) + " dépensé";
+          budgetFill.classList.remove("warning", "exceeded");
+          const track = budgetFill.parentElement;
+          if (!state.budgetEUR) {
+            budgetFill.style.width = "0%";
+            budgetRemaining.textContent = "Budget non défini";
+            budgetEditBtn.textContent = "Définir";
+            track.setAttribute("aria-valuenow", "0");
+            return;
+          }
+          const percent = (spent / state.budgetEUR) * 100;
+          budgetFill.style.width = Math.min(percent, 100) + "%";
+          if (percent >= 100) budgetFill.classList.add("exceeded");
+          else if (percent >= 75) budgetFill.classList.add("warning");
+          track.setAttribute("aria-valuenow", String(Math.min(Math.round(percent), 100)));
+          budgetEditBtn.textContent = "Modifier";
+          const remaining = state.budgetEUR - spent;
+          budgetRemaining.textContent = remaining >= 0
+            ? formatEUR(remaining) + " restant · " + Math.round(percent) + "% utilisé"
+            : "Dépassé de " + formatEUR(Math.abs(remaining));
+        }
+
+        function localDateKey(date) {
+          const year = date.getFullYear();
+          const month = String(date.getMonth() + 1).padStart(2, "0");
+          const day = String(date.getDate()).padStart(2, "0");
+          return year + "-" + month + "-" + day;
+        }
+
+        function parseDateInput(input) {
+          const normalized = String(input).trim();
+          let match = normalized.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+          let day;
+          let month;
+          let year;
+
+          if (match) {
+            day = parseInt(match[1], 10);
+            month = parseInt(match[2], 10);
+            year = parseInt(match[3], 10);
+          } else {
+            match = normalized.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+            if (!match) {
+              return null;
+            }
+            year = parseInt(match[1], 10);
+            month = parseInt(match[2], 10);
+            day = parseInt(match[3], 10);
+          }
+
+          const probe = new Date(year, month - 1, day);
+          if (
+            probe.getFullYear() !== year ||
+            probe.getMonth() !== month - 1 ||
+            probe.getDate() !== day
+          ) {
+            return null;
+          }
+
+          return { year: year, month: month, day: day };
+        }
+
+        function startOfDay(date) {
+          const d = new Date(date);
+          d.setHours(0, 0, 0, 0);
+          return d;
+        }
+
+        function addDays(date, days) {
+          const d = new Date(date);
+          d.setDate(d.getDate() + days);
+          return d;
+        }
+
+        function clearLongPressTimer() {
+          if (!longPressTimer) {
+            return;
+          }
+          window.clearTimeout(longPressTimer);
+          longPressTimer = null;
+        }
+
+        function openExpenseSheet(expenseId) {
+          activeExpenseId = expenseId;
+          const expense = state.expenses.find(function (item) {
+            return item.id === expenseId;
+          });
+          if (!expense) {
+            return;
+          }
+          const label = getCategoryLabel(expense.category);
+          sheetSub.textContent =
+            (expense.icon || getCategoryIcon(expense.category, "•")) +
+            " " +
+            label +
+            " - " +
+            formatEUR(expense.amountEUR);
+          expenseSheetOverlay.classList.add("open");
+          expenseSheetOverlay.setAttribute("aria-hidden", "false");
+        }
+
+        function closeExpenseSheet() {
+          activeExpenseId = null;
+          expenseSheetOverlay.classList.remove("open");
+          expenseSheetOverlay.setAttribute("aria-hidden", "true");
+        }
+
+        // Ecran initial: saisie
+        showScreen("entry");
+        syncAmountInput();
+        updateConversionHint();
+        updateConfirmState();
+        renderTodayTotal();
+      })();
+    </script>
+  </body>
+</html>
