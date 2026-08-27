@@ -1,6 +1,6 @@
-const CACHE_NAME = "express-budget-v1";
+const CACHE_NAME = "express-budget-v2";
 const APP_SHELL = [
-  "./vietnam_budget.html",
+  "./index.html",
   "./manifest.webmanifest",
   "./icons/icon.svg",
   "./icons/icon-192.png",
@@ -47,7 +47,7 @@ self.addEventListener("fetch", function (event) {
         return response;
       }).catch(function () {
         return caches.match(event.request).then(function (cached) {
-          return cached || caches.match("./vietnam_budget.html");
+          return cached || caches.match("./index.html");
         });
       })
     );
