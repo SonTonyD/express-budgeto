@@ -1,10 +1,10 @@
 {
-  "id": "./vietnam_budget.html",
+  "id": "./index.html",
   "name": "Express Budget",
   "short_name": "Budget",
   "description": "Suivi simple de budget et de dépenses, même hors ligne.",
   "lang": "fr",
-  "start_url": "./vietnam_budget.html",
+  "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
   "background_color": "#f5f4ef",
