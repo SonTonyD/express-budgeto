@@ -1,4 +1,4 @@
-const CACHE_NAME = "express-budget-v2";
+const CACHE_NAME = "express-budget-v3";
 const APP_SHELL = [
   "./index.html",
   "./manifest.webmanifest",

@@ -304,7 +304,7 @@
 
       .keypad {
         display: grid;
-        grid-template-columns: repeat(3, 1fr);
+        grid-template-columns: repeat(4, 1fr);
         gap: 10px;
         margin-bottom: 14px;
       }
@@ -326,9 +326,9 @@
         color: var(--accent-2);
       }
 
-      .keypad-btn.wide {
-        grid-column: span 3;
-        height: 48px;
+      .keypad-btn.operator {
+        color: var(--accent-2);
+        background: #edfaf8;
       }
 
       .confirm-btn {
@@ -658,15 +658,18 @@
             <div id="conversionLine" class="conversion"></div>
 
             <div id="keypad" class="keypad" aria-label="Pave numerique">
-              <button class="keypad-btn" type="button" data-key="1">1</button>
-              <button class="keypad-btn" type="button" data-key="2">2</button>
-              <button class="keypad-btn" type="button" data-key="3">3</button>
-              <button class="keypad-btn" type="button" data-key="4">4</button>
-              <button class="keypad-btn" type="button" data-key="5">5</button>
-              <button class="keypad-btn" type="button" data-key="6">6</button>
               <button class="keypad-btn" type="button" data-key="7">7</button>
               <button class="keypad-btn" type="button" data-key="8">8</button>
               <button class="keypad-btn" type="button" data-key="9">9</button>
+              <button class="keypad-btn operator" type="button" data-key="+" aria-label="Addition">+</button>
+              <button class="keypad-btn" type="button" data-key="4">4</button>
+              <button class="keypad-btn" type="button" data-key="5">5</button>
+              <button class="keypad-btn" type="button" data-key="6">6</button>
+              <button class="keypad-btn operator" type="button" data-key="-" aria-label="Soustraction">−</button>
+              <button class="keypad-btn" type="button" data-key="1">1</button>
+              <button class="keypad-btn" type="button" data-key="2">2</button>
+              <button class="keypad-btn" type="button" data-key="3">3</button>
+              <button class="keypad-btn operator" type="button" data-key="*" aria-label="Multiplication">×</button>
               <button class="keypad-btn" type="button" data-key=".">.</button>
               <button class="keypad-btn" type="button" data-key="0">0</button>
               <button
@@ -678,7 +681,7 @@
                 ⌫
               </button>
               <button
-                class="keypad-btn action wide"
+                class="keypad-btn action"
                 type="button"
                 data-key="clear"
                 aria-label="Effacer tout"
@@ -1211,10 +1214,26 @@
           }
 
           if (key === ".") {
-            if (amountBuffer.includes(".")) {
+            const currentOperand = amountBuffer.split(/[+\-*]/).pop();
+            if (currentOperand.includes(".")) {
               return;
             }
-            amountBuffer = amountBuffer ? amountBuffer + "." : "0.";
+            amountBuffer += currentOperand ? "." : "0.";
+            syncAmountInput();
+            updateConversionHint();
+            updateConfirmState();
+            return;
+          }
+
+          if (/^[+\-*]$/.test(key)) {
+            if (!amountBuffer) {
+              return;
+            }
+            if (/[+\-*]$/.test(amountBuffer)) {
+              amountBuffer = amountBuffer.slice(0, -1) + key;
+            } else {
+              amountBuffer += key;
+            }
             syncAmountInput();
             updateConversionHint();
             updateConfirmState();
@@ -1225,7 +1244,13 @@
             return;
           }
 
-          amountBuffer = amountBuffer === "0" ? key : amountBuffer + key;
+          if (amountBuffer.length >= 32) {
+            return;
+          }
+          const currentOperand = amountBuffer.split(/[+\-*]/).pop();
+          amountBuffer = currentOperand === "0"
+            ? amountBuffer.slice(0, -1) + key
+            : amountBuffer + key;
           syncAmountInput();
           updateConversionHint();
           updateConfirmState();
@@ -1237,14 +1262,33 @@
         }
 
         function syncAmountInput() {
-          amountInput.value = amountBuffer;
+          amountInput.value = amountBuffer.replace(/\*/g, " × ").replace(/-/g, " − ").replace(/\+/g, " + ");
         }
 
         function parseAmountBuffer() {
-          if (!amountBuffer) {
+          if (!/^\d+(?:\.\d*)?(?:[+\-*]\d+(?:\.\d*)?)*$/.test(amountBuffer)) {
             return NaN;
           }
-          return parseFloat(amountBuffer);
+
+          const tokens = amountBuffer.match(/\d+(?:\.\d*)?|[+\-*]/g);
+          const reduced = [parseFloat(tokens[0])];
+          for (let index = 1; index < tokens.length; index += 2) {
+            const operator = tokens[index];
+            const value = parseFloat(tokens[index + 1]);
+            if (operator === "*") {
+              reduced[reduced.length - 1] *= value;
+            } else {
+              reduced.push(operator, value);
+            }
+          }
+
+          let result = reduced[0];
+          for (let index = 1; index < reduced.length; index += 2) {
+            result = reduced[index] === "+"
+              ? result + reduced[index + 1]
+              : result - reduced[index + 1];
+          }
+          return result;
         }
 
         function updateConfirmState() {
@@ -1271,10 +1315,14 @@
 
           if (state.currentCurrency === "EUR") {
             const vnd = Math.round(raw * VND_PER_EUR);
-            conversionLine.textContent = "≈ " + formatVND(vnd) + " VND";
+            conversionLine.textContent = amountBuffer.match(/[+\-*]/)
+              ? "= " + formatEUR(raw) + " · ≈ " + formatVND(vnd) + " VND"
+              : "≈ " + formatVND(vnd) + " VND";
           } else {
             const eur = raw / VND_PER_EUR;
-            conversionLine.textContent = "≈ " + formatEUR(eur) + " EUR";
+            conversionLine.textContent = amountBuffer.match(/[+\-*]/)
+              ? "= " + formatVND(raw) + " VND · ≈ " + formatEUR(eur) + " EUR"
+              : "≈ " + formatEUR(eur) + " EUR";
           }
         }
 
