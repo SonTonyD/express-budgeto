@@ -169,6 +169,26 @@
         font-weight: 700;
       }
 
+      .install-btn {
+        display: none;
+        min-height: 42px;
+        margin-left: auto;
+        padding: 0 14px;
+        border: 0;
+        border-radius: 12px;
+        color: #fff;
+        background: var(--accent);
+        font: inherit;
+        font-size: 13px;
+        font-weight: 700;
+        cursor: pointer;
+        box-shadow: 0 6px 18px rgba(15, 118, 110, 0.22);
+      }
+
+      .install-btn.visible {
+        display: block;
+      }
+
       .budget-card {
         padding: 14px;
         margin-bottom: 12px;
@@ -603,6 +623,9 @@
             ☰
           </button>
           <p class="title">Saisie rapide</p>
+          <button id="installAppBtn" class="install-btn" type="button" aria-label="Installer Express Budget sur cet appareil">
+            Installer
+          </button>
         </div>
 
         <div class="today-summary" aria-live="polite">
@@ -1814,6 +1837,35 @@
       })();
     </script>
     <script>
+      (function () {
+        const installButton = document.getElementById("installAppBtn");
+        let installPrompt = null;
+
+        function isInstalled() {
+          return window.matchMedia("(display-mode: standalone)").matches ||
+            window.navigator.standalone === true;
+        }
+
+        window.addEventListener("beforeinstallprompt", function (event) {
+          event.preventDefault();
+          installPrompt = event;
+          if (!isInstalled()) installButton.classList.add("visible");
+        });
+
+        installButton.addEventListener("click", async function () {
+          if (!installPrompt) return;
+          installButton.classList.remove("visible");
+          await installPrompt.prompt();
+          await installPrompt.userChoice;
+          installPrompt = null;
+        });
+
+        window.addEventListener("appinstalled", function () {
+          installPrompt = null;
+          installButton.classList.remove("visible");
+        });
+      })();
+
       if ("serviceWorker" in navigator) {
         window.addEventListener("load", function () {
           navigator.serviceWorker.register("./service-worker.js").catch(function (error) {

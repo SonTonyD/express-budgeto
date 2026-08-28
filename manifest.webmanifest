@@ -1,12 +1,14 @@
 {
-  "id": "./index.html",
+  "id": "./",
   "name": "Express Budget",
   "short_name": "Budget",
   "description": "Suivi simple de budget et de dépenses, même hors ligne.",
   "lang": "fr",
-  "start_url": "./index.html",
+  "start_url": "./index.html?source=pwa",
   "scope": "./",
   "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
+  "orientation": "portrait-primary",
   "background_color": "#f5f4ef",
   "theme_color": "#0f766e",
   "icons": [
@@ -20,7 +22,14 @@
       "src": "./icons/icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "./icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
     }
-  ]
+  ],
+  "prefer_related_applications": false
 }
